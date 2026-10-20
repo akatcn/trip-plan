@@ -17,7 +17,7 @@ import type { Block } from "./types"
 type Unsubscribe = () => void
 
 export interface Store {
-  watch(onChange: (blocks: Block[]) => void): Unsubscribe
+  watch(onChange: (blocks: Block[]) => void, onError: (e: Error) => void): Unsubscribe
   put(blocks: Block[]): Promise<void>
   remove(id: string): Promise<void>
 }
@@ -38,10 +38,14 @@ function firestoreStore(s: Session): Store {
   const db = getFirestore(initializeApp(firebaseConfig))
   const col = collection(db, "trips", s.tripId, "blocks")
   return {
-    watch(onChange) {
-      return onSnapshot(col, async (snap) => {
-        onChange(await decryptAll(s, snap.docs.map((d) => d.data() as Encrypted)))
-      })
+    watch(onChange, onError) {
+      return onSnapshot(
+        col,
+        async (snap) => {
+          onChange(await decryptAll(s, snap.docs.map((d) => d.data() as Encrypted)))
+        },
+        onError
+      )
     },
     async put(blocks) {
       const batch = writeBatch(db)

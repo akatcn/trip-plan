@@ -28,7 +28,7 @@ import {
 
 import { BlockDialog } from "@/components/block-dialog"
 import { DaySelect } from "@/components/day-select"
-import { Badge } from "@/components/ui/badge"
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -56,16 +56,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { Store } from "@/lib/store"
-import type { Block, BlockInput, Day } from "@/lib/types"
+import type { Author, Block, BlockInput, Day } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export const yen = (n: number) => `¥${n.toLocaleString("ko-KR")}`
-
-const AUTHOR_STYLE: Record<string, string> = {
-  용훈: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  성진: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  현준: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-}
 
 export function Backlog({
   store,
@@ -73,12 +67,18 @@ export function Backlog({
   setBlocks,
   day,
   onDay,
+  user,
+  loading,
+  error,
 }: {
   store: Store
   blocks: Block[]
   setBlocks: (b: Block[]) => void
   day: Day
   onDay: (d: Day) => void
+  user: Author
+  loading: boolean
+  error: string
 }) {
   const rows = useMemo(
     () => blocks.filter((b) => b.day === day).sort((a, b) => a.order - b.order),
@@ -121,8 +121,8 @@ export function Backlog({
   async function confirmDelete() {
     if (!deleting) return
     setBlocks(blocks.filter((b) => b.id !== deleting.id))
-    await store.remove(deleting.id)
     setDeleting(null)
+    await store.remove(deleting.id).catch(console.error)
   }
 
   async function onDragEnd(e: DragEndEvent) {
@@ -136,7 +136,7 @@ export function Backlog({
       .filter((b, i) => b.order !== rows.find((r) => r.id === moved[i].id)?.order)
     const byId = new Map(changed.map((b) => [b.id, b]))
     setBlocks(blocks.map((b) => byId.get(b.id) ?? b))
-    await store.put(changed)
+    await store.put(changed).catch(console.error)
   }
 
   return (
@@ -145,9 +145,15 @@ export function Backlog({
         <DaySelect day={day} onDay={onDay} />
         <Button onClick={openNew}>
           <PlusIcon />
-          블록 추가
+          백로그 추가
         </Button>
       </div>
+
+      {error && (
+        <div className="border-destructive/50 text-destructive rounded-lg border px-4 py-3 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border">
         <DndContext
@@ -172,7 +178,9 @@ export function Backlog({
               {rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    {day}일차에 아직 블록이 없어요. 오른쪽 위 ‘블록 추가’를 눌러 보세요.
+                    {loading
+                      ? "불러오는 중…"
+                      : `${day}일차에 아직 백로그가 없어요. 오른쪽 위 ‘백로그 추가’를 눌러 보세요.`}
                   </TableCell>
                 </TableRow>
               )}
@@ -212,14 +220,15 @@ export function Backlog({
         onOpenChange={setDialogOpen}
         day={day}
         editing={editing}
+        user={user}
         onSave={save}
       />
 
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>블록을 삭제할까요?</DialogTitle>
-            <DialogDescription>‘{deleting?.title}’ 블록이 모두에게서 사라져요.</DialogDescription>
+            <DialogTitle>백로그를 삭제할까요?</DialogTitle>
+            <DialogDescription>‘{deleting?.title}’ 항목이 모두에게서 사라져요.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
@@ -303,9 +312,7 @@ function SortableRow({
         {b.cost != null ? yen(b.cost) : <span className="text-muted-foreground">-</span>}
       </TableCell>
       <TableCell>
-        <Badge variant="secondary" className={AUTHOR_STYLE[b.author]}>
-          {b.author}
-        </Badge>
+        <UserAvatar name={b.author} size="sm" />
       </TableCell>
       <TableCell>
         <DropdownMenu>
