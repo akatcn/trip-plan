@@ -1,4 +1,4 @@
-import { ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon, UsersIcon } from "lucide-react"
+import { EyeIcon, ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon, UsersIcon } from "lucide-react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import type { Author } from "@/lib/types"
@@ -33,7 +33,7 @@ export function AppSidebar({
 }: {
   tab: Tab
   onTab: (t: Tab) => void
-  user: Author
+  user: Author | null
   onSwitchUser: () => void
   onLogout: () => void
 }) {
@@ -81,21 +81,42 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="pointer-events-none">
-              <UserAvatar name={user} size="sm" className="size-8" textClassName="text-[10px]" />
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user}</span>
-                <span className="text-muted-foreground truncate text-xs">로그인 중</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="사용자 변경" onClick={onSwitchUser}>
-              <UsersIcon />
-              <span>사용자 변경</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {user ? (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" className="pointer-events-none">
+                  <UserAvatar
+                    name={user}
+                    size="sm"
+                    className="size-8"
+                    textClassName="text-[10px]"
+                  />
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user}</span>
+                    <span className="text-muted-foreground truncate text-xs">로그인 중</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="사용자 변경" onClick={onSwitchUser}>
+                  <UsersIcon />
+                  <span>사용자 변경</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          ) : (
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" className="pointer-events-none">
+                <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
+                  <EyeIcon className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">보기 전용</span>
+                  <span className="text-muted-foreground truncate text-xs">편집할 수 없어요</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="나가기" onClick={onLogout}>
               <LogOutIcon />

@@ -66,11 +66,12 @@ export default function App() {
         }}
       />
     )
-  if (!user) return <ProfilePicker onPick={pickUser} />
+  const readOnly = session.role === "viewer"
+  if (!readOnly && !user) return <ProfilePicker onPick={pickUser} />
   return (
     <Dashboard
       session={session}
-      user={user}
+      user={readOnly ? null : user}
       onSwitchUser={() => pickUser(null)}
       onLogout={() => {
         storage.set(PASS_KEY, null)
@@ -88,7 +89,7 @@ function Dashboard({
   onLogout,
 }: {
   session: Session
-  user: Author
+  user: Author | null
   onSwitchUser: () => void
   onLogout: () => void
 }) {
@@ -113,11 +114,11 @@ function Dashboard({
           setError(
             e.message.includes("permission")
               ? "데이터를 읽을 권한이 없어요. Firebase 콘솔에 최신 firestore.rules가 게시되어 있는지 확인해 주세요."
-              : "데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요."
+              : "데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.",
           )
-        }
+        },
       ),
-    [store]
+    [store],
   )
 
   return (
@@ -144,6 +145,7 @@ function Dashboard({
               day={day}
               onDay={setDay}
               user={user}
+              readOnly={session.role === "viewer"}
               loading={!loaded}
               error={error}
             />
