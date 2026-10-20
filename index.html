@@ -1,55 +1,14 @@
 <!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>여행 계획</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗾</text></svg>" />
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
-  <!-- PIN 입력 화면 -->
-  <section id="lock" class="lock">
-    <div class="lock-card">
-      <div class="lock-emoji">🗾</div>
-      <h1>우리들의 여행 계획</h1>
-      <p class="muted">4자리 비밀번호를 입력하세요</p>
-      <form id="pin-form" autocomplete="off">
-        <input id="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autofocus />
-        <button type="submit" id="pin-btn">입장</button>
-      </form>
-      <p id="pin-msg" class="msg"></p>
-      <p id="mode-note" class="muted small"></p>
-    </div>
-  </section>
-
-  <!-- 본 화면 -->
-  <section id="app" class="app" hidden>
-    <header class="top">
-      <div>
-        <input id="trip-title" class="title-input" placeholder="여행 제목" />
-        <div class="dates">
-          <input type="date" id="start-date" /> ~ <input type="date" id="end-date" />
-        </div>
-      </div>
-      <div class="top-right">
-        <span id="sync" class="sync">저장됨</span>
-        <button id="logout" class="ghost">나가기</button>
-      </div>
-    </header>
-
-    <nav class="tabs">
-      <button data-tab="schedule" class="active">📅 일정</button>
-      <button data-tab="stays">🏨 숙소</button>
-      <button data-tab="budget">💴 경비</button>
-      <button data-tab="checklist">✅ 준비물</button>
-      <button data-tab="notes">📝 메모</button>
-    </nav>
-
-    <main id="view"></main>
-  </section>
-
-  <script type="module" src="js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🗾</text></svg>" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>일본 여행 계획</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
