@@ -1,4 +1,7 @@
-import { ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon } from "lucide-react"
+import { ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon, UsersIcon } from "lucide-react"
+
+import { UserAvatar } from "@/components/user-avatar"
+import type { Author } from "@/lib/types"
 
 import {
   Sidebar,
@@ -24,10 +27,14 @@ const items: { tab: Tab; label: string; icon: typeof MapIcon }[] = [
 export function AppSidebar({
   tab,
   onTab,
+  user,
+  onSwitchUser,
   onLogout,
 }: {
   tab: Tab
   onTab: (t: Tab) => void
+  user: Author
+  onSwitchUser: () => void
   onLogout: () => void
 }) {
   const { setOpenMobile } = useSidebar()
@@ -74,6 +81,21 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" className="pointer-events-none">
+              <UserAvatar name={user} size="sm" className="size-8" textClassName="text-[10px]" />
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{user}</span>
+                <span className="text-muted-foreground truncate text-xs">로그인 중</span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="사용자 변경" onClick={onSwitchUser}>
+              <UsersIcon />
+              <span>사용자 변경</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="나가기" onClick={onLogout}>
               <LogOutIcon />

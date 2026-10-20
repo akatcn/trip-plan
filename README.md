@@ -2,7 +2,8 @@
 
 용훈 · 성진 · 현준이 일본 여행 계획을 함께 쌓아 가는 대시보드입니다. 별도 서버 없이 **GitHub Pages(화면) + Firebase Firestore(데이터)** 로 동작하고, **비밀번호** 하나로만 들어올 수 있습니다.
 
-- **백로그**: 1~4일차를 골라 블록(작성자, 제목, 장소, 비용, 내용)을 추가하고, 끌어서 순서를 바꾸고, 옵션 메뉴로 편집·삭제
+- **사용자 선택**: 비밀번호 입력 후 넷플릭스처럼 용훈·성진·현준 중 한 명을 고르면 그 사람으로 로그인
+- **백로그**: 1~4일차를 골라 항목(제목, 장소, 비용, 내용)을 추가하면 작성자는 로그인한 사람으로 기록되고, 끌어서 순서를 바꾸고, 옵션 메뉴로 편집·삭제
 - **지도**: 선택한 날의 장소를 백로그 순서대로 보여 주고, 구글 지도로 하루 경로 열기
 - 한 명이 고치면 다른 사람 화면에도 바로 반영
 - UI는 [shadcn/ui](https://ui.shadcn.com) 컴포넌트만 사용 (React + Vite + Tailwind CSS)
@@ -40,6 +41,8 @@ VITE_LOCAL_STORE=1 npm run dev   # 이 브라우저(localStorage)에만 저장�
 | --- | --- |
 | `src/App.tsx` | 로그인 상태, 대시보드 레이아웃 |
 | `src/components/app-sidebar.tsx` | 좌측 네비게이션 |
+| `src/components/profile-picker.tsx` | 사용자 선택 화면 |
+| `src/components/user-avatar.tsx` | 사용자별 색깔 아바타 |
 | `src/components/backlog.tsx` | 백로그 테이블, 순서 변경, 편집·삭제 |
 | `src/components/block-dialog.tsx` | 블록 추가·편집 다이얼로그 |
 | `src/components/map-view.tsx` | 지도 탭 |
