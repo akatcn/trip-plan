@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
+  EyeIcon,
   GripVerticalIcon,
   MapPinIcon,
   MoreHorizontalIcon,
@@ -68,6 +69,7 @@ export function Backlog({
   day,
   onDay,
   user,
+  readOnly,
   loading,
   error,
 }: {
@@ -76,13 +78,14 @@ export function Backlog({
   setBlocks: (b: Block[]) => void
   day: Day
   onDay: (d: Day) => void
-  user: Author
+  user: Author | null
+  readOnly: boolean
   loading: boolean
   error: string
 }) {
   const rows = useMemo(
     () => blocks.filter((b) => b.day === day).sort((a, b) => a.order - b.order),
-    [blocks, day]
+    [blocks, day],
   )
   const total = rows.reduce((s, b) => s + (b.cost ?? 0), 0)
 
@@ -92,7 +95,7 @@ export function Backlog({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   function openNew() {
@@ -143,10 +146,17 @@ export function Backlog({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <DaySelect day={day} onDay={onDay} />
-        <Button onClick={openNew}>
-          <PlusIcon />
-          백로그 추가
-        </Button>
+        {readOnly ? (
+          <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
+            <EyeIcon className="size-4" />
+            보기 전용
+          </span>
+        ) : (
+          <Button onClick={openNew}>
+            <PlusIcon />
+            백로그 추가
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -165,13 +175,13 @@ export function Backlog({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-8" />
+                {!readOnly && <TableHead className="w-8" />}
                 <TableHead className="hidden w-8 sm:table-cell">#</TableHead>
                 <TableHead>제목</TableHead>
                 <TableHead className="hidden sm:table-cell">장소</TableHead>
                 <TableHead className="text-right">비용</TableHead>
                 <TableHead>작성자</TableHead>
-                <TableHead className="w-10" />
+                {!readOnly && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,7 +190,9 @@ export function Backlog({
                   <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
                     {loading
                       ? "불러오는 중…"
-                      : `${day}일차에 아직 백로그가 없어요. 오른쪽 위 ‘백로그 추가’를 눌러 보세요.`}
+                      : readOnly
+                        ? `${day}일차에 아직 백로그가 없어요.`
+                        : `${day}일차에 아직 백로그가 없어요. 오른쪽 위 ‘백로그 추가’를 눌러 보세요.`}
                   </TableCell>
                 </TableRow>
               )}
@@ -190,6 +202,7 @@ export function Backlog({
                     key={b.id}
                     block={b}
                     index={i}
+                    readOnly={readOnly}
                     onEdit={() => {
                       setEditing(b)
                       setDialogOpen(true)
@@ -202,12 +215,12 @@ export function Backlog({
             {total > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell />
+                  {!readOnly && <TableCell />}
                   <TableCell className="hidden sm:table-cell" />
                   <TableCell>{day}일차 합계</TableCell>
                   <TableCell className="hidden sm:table-cell" />
                   <TableCell className="text-right tabular-nums">{yen(total)}</TableCell>
-                  <TableCell colSpan={2} />
+                  <TableCell colSpan={readOnly ? 1 : 2} />
                 </TableRow>
               </TableFooter>
             )}
@@ -215,14 +228,16 @@ export function Backlog({
         </DndContext>
       </div>
 
-      <BlockDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        day={day}
-        editing={editing}
-        user={user}
-        onSave={save}
-      />
+      {user && !readOnly && (
+        <BlockDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          day={day}
+          editing={editing}
+          user={user}
+          onSave={save}
+        />
+      )}
 
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent className="sm:max-w-sm">
@@ -247,16 +262,25 @@ export function Backlog({
 function SortableRow({
   block: b,
   index,
+  readOnly,
   onEdit,
   onDelete,
 }: {
   block: Block
   index: number
+  readOnly: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: b.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: b.id, disabled: readOnly })
 
   return (
     <TableRow
@@ -265,20 +289,24 @@ function SortableRow({
       className={cn("bg-background", isDragging && "relative z-10 shadow-lg")}
       data-state={isDragging ? "selected" : undefined}
     >
-      <TableCell className="pr-0">
-        <Button
-          ref={setActivatorNodeRef}
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground size-7 cursor-grab touch-none active:cursor-grabbing"
-          aria-label="순서 변경"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVerticalIcon />
-        </Button>
+      {!readOnly && (
+        <TableCell className="pr-0">
+          <Button
+            ref={setActivatorNodeRef}
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground size-7 cursor-grab touch-none active:cursor-grabbing"
+            aria-label="순서 변경"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVerticalIcon />
+          </Button>
+        </TableCell>
+      )}
+      <TableCell className="text-muted-foreground hidden tabular-nums sm:table-cell">
+        {index + 1}
       </TableCell>
-      <TableCell className="text-muted-foreground hidden tabular-nums sm:table-cell">{index + 1}</TableCell>
       <TableCell className="max-w-72 min-w-36 whitespace-normal">
         <div className="font-medium">{b.title}</div>
         {b.place && (
@@ -314,26 +342,28 @@ function SortableRow({
       <TableCell>
         <UserAvatar name={b.author} size="sm" />
       </TableCell>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" aria-label="옵션">
-              <MoreHorizontalIcon />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-32">
-            <DropdownMenuItem onSelect={onEdit}>
-              <PencilIcon />
-              편집
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2Icon />
-              삭제
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
+      {!readOnly && (
+        <TableCell>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8" aria-label="옵션">
+                <MoreHorizontalIcon />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuItem onSelect={onEdit}>
+                <PencilIcon />
+                편집
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                <Trash2Icon />
+                삭제
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      )}
     </TableRow>
   )
 }
