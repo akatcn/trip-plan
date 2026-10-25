@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { AppSidebar, type Tab } from "@/components/app-sidebar"
 import { Backlog } from "@/components/backlog"
+import { Plan } from "@/components/plan"
 import { Login } from "@/components/login"
 import { MapView } from "@/components/map-view"
 import { ProfilePicker } from "@/components/profile-picker"
@@ -9,7 +10,9 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { unlock, type Session } from "@/lib/crypto"
 import { createStore } from "@/lib/store"
-import { AUTHORS, type Author, type Block, type Day } from "@/lib/types"
+import { AUTHORS, type Author, type Block, type Day, type Doc, type Idea } from "@/lib/types"
+
+const TITLE: Record<Tab, string> = { plan: "여행계획", backlog: "백로그", map: "지도" }
 
 const PASS_KEY = "trip-plan:password"
 const USER_KEY = "trip-plan:user"
@@ -94,17 +97,21 @@ function Dashboard({
   onLogout: () => void
 }) {
   const store = useMemo(() => createStore(session), [session])
-  const [blocks, setBlocks] = useState<Block[]>([])
+  const [docs, setDocs] = useState<Doc[]>([])
+  const blocks = useMemo(() => docs.filter((d): d is Block => d.kind !== "idea"), [docs])
+  const ideas = useMemo(() => docs.filter((d): d is Idea => d.kind === "idea"), [docs])
+  const setBlocks = (b: Block[]) => setDocs([...ideas, ...b])
+  const setIdeas = (i: Idea[]) => setDocs([...blocks, ...i])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState("")
-  const [tab, setTab] = useState<Tab>("backlog")
+  const [tab, setTab] = useState<Tab>("plan")
   const [day, setDay] = useState<Day>(1)
 
   useEffect(
     () =>
       store.watch(
-        (b) => {
-          setBlocks(b)
+        (d) => {
+          setDocs(d)
           setLoaded(true)
           setError("")
         },
@@ -134,16 +141,26 @@ function Dashboard({
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <h1 className="font-medium">{tab === "backlog" ? "백로그" : "지도"}</h1>
+          <h1 className="font-medium">{TITLE[tab]}</h1>
         </header>
         <main className="flex-1 p-4 md:p-6">
-          {tab === "backlog" ? (
-            <Backlog
+          {tab === "plan" ? (
+            <Plan
               store={store}
               blocks={blocks}
               setBlocks={setBlocks}
               day={day}
               onDay={setDay}
+              user={user}
+              readOnly={session.role === "viewer"}
+              loading={!loaded}
+              error={error}
+            />
+          ) : tab === "backlog" ? (
+            <Backlog
+              store={store}
+              ideas={ideas}
+              setIdeas={setIdeas}
               user={user}
               readOnly={session.role === "viewer"}
               loading={!loaded}

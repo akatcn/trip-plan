@@ -81,8 +81,8 @@ export function BlockDialog({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>{editing ? "백로그 편집" : "백로그 추가"}</DialogTitle>
-            <DialogDescription>{day}일차 백로그</DialogDescription>
+            <DialogTitle>{editing ? "일정 편집" : "일정 추가"}</DialogTitle>
+            <DialogDescription>{day}일차 여행계획</DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center gap-3">
