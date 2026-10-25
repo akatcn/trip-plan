@@ -1,36 +1,9 @@
 import { useMemo, useState } from "react"
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core"
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import {
-  EyeIcon,
-  GripVerticalIcon,
-  MapPinIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from "lucide-react"
+import { EyeIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
-import { BlockDialog } from "@/components/block-dialog"
-import { DaySelect } from "@/components/day-select"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogClose,
@@ -47,117 +20,157 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { Store } from "@/lib/store"
-import type { Author, Block, BlockInput, Day } from "@/lib/types"
-import { cn } from "@/lib/utils"
+import { CATEGORIES, type Author, type Category, type Idea } from "@/lib/types"
 
-export const yen = (n: number) => `¥${n.toLocaleString("ko-KR")}`
+const EMOJI: Record<Category, string> = {
+  "먹고 싶은 것": "🍜",
+  "가고 싶은 곳": "🏯",
+  "사고 싶은 것": "🛍️",
+  "하고 싶은 것": "🎢",
+  기타: "📌",
+}
+
+const LAST_CATEGORY = "trip-plan:last-category"
+
+function lastCategory(): Category {
+  try {
+    const v = localStorage.getItem(LAST_CATEGORY)
+    return CATEGORIES.includes(v as Category) ? (v as Category) : CATEGORIES[0]
+  } catch {
+    return CATEGORIES[0]
+  }
+}
+
+function CategorySelect({
+  value,
+  onChange,
+  id,
+  className,
+}: {
+  value: Category
+  onChange: (c: Category) => void
+  id?: string
+  className?: string
+}) {
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as Category)}>
+      <SelectTrigger id={id} className={className} aria-label="카테고리">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CATEGORIES.map((c) => (
+          <SelectItem key={c} value={c}>
+            {EMOJI[c]} {c}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 export function Backlog({
   store,
-  blocks,
-  setBlocks,
-  day,
-  onDay,
+  ideas,
+  setIdeas,
   user,
   readOnly,
   loading,
   error,
 }: {
   store: Store
-  blocks: Block[]
-  setBlocks: (b: Block[]) => void
-  day: Day
-  onDay: (d: Day) => void
+  ideas: Idea[]
+  setIdeas: (i: Idea[]) => void
   user: Author | null
   readOnly: boolean
   loading: boolean
   error: string
 }) {
-  const rows = useMemo(
-    () => blocks.filter((b) => b.day === day).sort((a, b) => a.order - b.order),
-    [blocks, day],
-  )
-  const total = rows.reduce((s, b) => s + (b.cost ?? 0), 0)
+  const [category, setCategory] = useState<Category>(lastCategory)
+  const [title, setTitle] = useState("")
+  const [filter, setFilter] = useState<Category | "all">("all")
+  const [editing, setEditing] = useState<Idea | null>(null)
+  const [deleting, setDeleting] = useState<Idea | null>(null)
+  const [addError, setAddError] = useState("")
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<Block | null>(null)
-  const [deleting, setDeleting] = useState<Block | null>(null)
+  const sorted = useMemo(() => [...ideas].sort((a, b) => a.createdAt - b.createdAt), [ideas])
+  const groups = CATEGORIES.filter((c) => filter === "all" || c === filter)
+    .map((c) => ({ category: c, items: sorted.filter((i) => i.category === c) }))
+    .filter((g) => filter !== "all" || g.items.length > 0)
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function openNew() {
-    setEditing(null)
-    setDialogOpen(true)
-  }
-
-  async function save(input: BlockInput) {
-    if (editing) {
-      const next = { ...editing, ...input }
-      setBlocks(blocks.map((b) => (b.id === next.id ? next : b)))
-      await store.put([next])
-    } else {
-      const next: Block = {
-        ...input,
-        id: crypto.randomUUID(),
-        day,
-        order: rows.length ? rows[rows.length - 1].order + 1 : 0,
-        createdAt: Date.now(),
-      }
-      setBlocks([...blocks, next])
-      await store.put([next])
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user || !title.trim()) return
+    const idea: Idea = {
+      kind: "idea",
+      id: crypto.randomUUID(),
+      category,
+      title: title.trim(),
+      author: user,
+      createdAt: Date.now(),
+    }
+    try {
+      localStorage.setItem(LAST_CATEGORY, category)
+    } catch {
+      // 무시
+    }
+    setTitle("")
+    setAddError("")
+    setIdeas([...ideas, idea])
+    try {
+      await store.put([idea])
+    } catch (err) {
+      console.error(err)
+      setAddError("저장하지 못했어요. 잠시 후 다시 시도해 주세요.")
     }
   }
 
   async function confirmDelete() {
     if (!deleting) return
-    setBlocks(blocks.filter((b) => b.id !== deleting.id))
+    setIdeas(ideas.filter((i) => i.id !== deleting.id))
     setDeleting(null)
     await store.remove(deleting.id).catch(console.error)
   }
 
-  async function onDragEnd(e: DragEndEvent) {
-    const { active, over } = e
-    if (!over || active.id === over.id) return
-    const from = rows.findIndex((r) => r.id === active.id)
-    const to = rows.findIndex((r) => r.id === over.id)
-    const moved = arrayMove(rows, from, to)
-    const changed = moved
-      .map((b, i) => ({ ...b, order: i }))
-      .filter((b, i) => b.order !== rows.find((r) => r.id === moved[i].id)?.order)
-    const byId = new Map(changed.map((b) => [b.id, b]))
-    setBlocks(blocks.map((b) => byId.get(b.id) ?? b))
-    await store.put(changed).catch(console.error)
+  async function saveEdit(next: Idea) {
+    setIdeas(ideas.map((i) => (i.id === next.id ? next : i)))
+    setEditing(null)
+    await store.put([next]).catch(console.error)
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <DaySelect day={day} onDay={onDay} />
-        {readOnly ? (
-          <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <EyeIcon className="size-4" />
-            보기 전용
-          </span>
-        ) : (
-          <Button onClick={openNew}>
+      {readOnly ? (
+        <span className="text-muted-foreground flex items-center gap-1.5 self-end text-sm">
+          <EyeIcon className="size-4" />
+          보기 전용
+        </span>
+      ) : (
+        <form onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
+          <CategorySelect value={category} onChange={setCategory} className="sm:w-44" />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={category === "가고 싶은 곳" ? "예: 히메지 성" : "예: 타코야끼"}
+            aria-label="항목"
+            className="flex-1"
+          />
+          <Button type="submit" disabled={!title.trim()}>
             <PlusIcon />
-            백로그 추가
+            추가
           </Button>
-        )}
-      </div>
+        </form>
+      )}
+      {addError && <p className="text-destructive text-sm">{addError}</p>}
 
       {error && (
         <div className="border-destructive/50 text-destructive rounded-lg border px-4 py-3 text-sm">
@@ -165,84 +178,107 @@ export function Backlog({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragEnd={onDragEnd}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant={filter === "all" ? "default" : "outline"}
+          onClick={() => setFilter("all")}
         >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {!readOnly && <TableHead className="w-8" />}
-                <TableHead className="hidden w-8 sm:table-cell">#</TableHead>
-                <TableHead>제목</TableHead>
-                <TableHead className="hidden sm:table-cell">장소</TableHead>
-                <TableHead className="text-right">비용</TableHead>
-                <TableHead>작성자</TableHead>
-                {!readOnly && <TableHead className="w-10" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    {loading
-                      ? "불러오는 중…"
-                      : readOnly
-                        ? `${day}일차에 아직 백로그가 없어요.`
-                        : `${day}일차에 아직 백로그가 없어요. 오른쪽 위 ‘백로그 추가’를 눌러 보세요.`}
-                  </TableCell>
-                </TableRow>
-              )}
-              <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                {rows.map((b, i) => (
-                  <SortableRow
-                    key={b.id}
-                    block={b}
-                    index={i}
-                    readOnly={readOnly}
-                    onEdit={() => {
-                      setEditing(b)
-                      setDialogOpen(true)
-                    }}
-                    onDelete={() => setDeleting(b)}
-                  />
-                ))}
-              </SortableContext>
-            </TableBody>
-            {total > 0 && (
-              <TableFooter>
-                <TableRow>
-                  {!readOnly && <TableCell />}
-                  <TableCell className="hidden sm:table-cell" />
-                  <TableCell>{day}일차 합계</TableCell>
-                  <TableCell className="hidden sm:table-cell" />
-                  <TableCell className="text-right tabular-nums">{yen(total)}</TableCell>
-                  <TableCell colSpan={readOnly ? 1 : 2} />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </DndContext>
+          전체 {ideas.length}
+        </Button>
+        {CATEGORIES.map((c) => (
+          <Button
+            key={c}
+            size="sm"
+            variant={filter === c ? "default" : "outline"}
+            onClick={() => setFilter(c)}
+          >
+            {EMOJI[c]} {c} {ideas.filter((i) => i.category === c).length}
+          </Button>
+        ))}
       </div>
 
-      {user && !readOnly && (
-        <BlockDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          day={day}
-          editing={editing}
-          user={user}
-          onSave={save}
-        />
+      {loading ? (
+        <p className="text-muted-foreground text-sm">불러오는 중…</p>
+      ) : groups.length === 0 ? (
+        <p className="text-muted-foreground rounded-lg border px-4 py-10 text-center text-sm">
+          {readOnly
+            ? "아직 백로그가 없어요."
+            : "먹고 싶은 것, 가고 싶은 곳을 생각나는 대로 적어 두세요."}
+        </p>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {groups.map((g) => (
+            <Card key={g.category} className="gap-2 py-4">
+              <CardHeader className="px-4">
+                <CardTitle className="text-base">
+                  {EMOJI[g.category]} {g.category}{" "}
+                  <span className="text-muted-foreground font-normal">{g.items.length}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-2">
+                {g.items.length === 0 ? (
+                  <p className="text-muted-foreground px-2 py-4 text-sm">아직 없어요</p>
+                ) : (
+                  <ul className="grid">
+                    {g.items.map((i) => (
+                      <li
+                        key={i.id}
+                        className="hover:bg-accent/60 flex items-center gap-3 rounded-md px-2 py-1.5"
+                      >
+                        <UserAvatar
+                          name={i.author}
+                          size="sm"
+                          className="size-7"
+                          textClassName="text-[9px]"
+                        />
+                        <span className="min-w-0 flex-1 text-sm break-words">{i.title}</span>
+                        {!readOnly && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                aria-label="옵션"
+                              >
+                                <MoreHorizontalIcon />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                              <DropdownMenuItem onSelect={() => setEditing(i)}>
+                                <PencilIcon />
+                                편집
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => setDeleting(i)}
+                              >
+                                <Trash2Icon />
+                                삭제
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!readOnly && (
+        <EditDialog idea={editing} onClose={() => setEditing(null)} onSave={saveEdit} />
       )}
 
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>백로그를 삭제할까요?</DialogTitle>
+            <DialogTitle>백로그에서 삭제할까요?</DialogTitle>
             <DialogDescription>‘{deleting?.title}’ 항목이 모두에게서 사라져요.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -259,111 +295,62 @@ export function Backlog({
   )
 }
 
-function SortableRow({
-  block: b,
-  index,
-  readOnly,
-  onEdit,
-  onDelete,
+function EditDialog({
+  idea,
+  onClose,
+  onSave,
 }: {
-  block: Block
-  index: number
-  readOnly: boolean
-  onEdit: () => void
-  onDelete: () => void
+  idea: Idea | null
+  onClose: () => void
+  onSave: (i: Idea) => void
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: b.id, disabled: readOnly })
-
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("bg-background", isDragging && "relative z-10 shadow-lg")}
-      data-state={isDragging ? "selected" : undefined}
+    <Dialog open={!!idea} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {idea && <EditForm key={idea.id} idea={idea} onSave={onSave} />}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function EditForm({ idea, onSave }: { idea: Idea; onSave: (i: Idea) => void }) {
+  const [category, setCategory] = useState<Category>(idea.category)
+  const [title, setTitle] = useState(idea.title)
+  return (
+    <form
+      className="grid gap-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (title.trim()) onSave({ ...idea, category, title: title.trim() })
+      }}
     >
-      {!readOnly && (
-        <TableCell className="pr-0">
-          <Button
-            ref={setActivatorNodeRef}
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground size-7 cursor-grab touch-none active:cursor-grabbing"
-            aria-label="순서 변경"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVerticalIcon />
+      <DialogHeader>
+        <DialogTitle>백로그 편집</DialogTitle>
+        <DialogDescription>{idea.author}님이 적은 항목</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-2">
+        <Label htmlFor="idea-category">카테고리</Label>
+        <CategorySelect
+          id="idea-category"
+          value={category}
+          onChange={setCategory}
+          className="w-full"
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="idea-title">항목</Label>
+        <Input id="idea-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="outline">
+            취소
           </Button>
-        </TableCell>
-      )}
-      <TableCell className="text-muted-foreground hidden tabular-nums sm:table-cell">
-        {index + 1}
-      </TableCell>
-      <TableCell className="max-w-72 min-w-36 whitespace-normal">
-        <div className="font-medium">{b.title}</div>
-        {b.place && (
-          <div className="text-muted-foreground flex items-center gap-1 text-xs sm:hidden">
-            <MapPinIcon className="size-3 shrink-0" />
-            {b.place}
-          </div>
-        )}
-        {b.content && (
-          <div className="text-muted-foreground line-clamp-2 text-xs whitespace-pre-line">
-            {b.content}
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="hidden max-w-48 whitespace-normal sm:table-cell">
-        {b.place ? (
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.place)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 hover:underline"
-          >
-            <MapPinIcon className="text-muted-foreground size-3.5 shrink-0" />
-            {b.place}
-          </a>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {b.cost != null ? yen(b.cost) : <span className="text-muted-foreground">-</span>}
-      </TableCell>
-      <TableCell>
-        <UserAvatar name={b.author} size="sm" />
-      </TableCell>
-      {!readOnly && (
-        <TableCell>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8" aria-label="옵션">
-                <MoreHorizontalIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
-              <DropdownMenuItem onSelect={onEdit}>
-                <PencilIcon />
-                편집
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-                <Trash2Icon />
-                삭제
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell>
-      )}
-    </TableRow>
+        </DialogClose>
+        <Button type="submit" disabled={!title.trim()}>
+          저장
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }

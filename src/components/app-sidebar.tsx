@@ -1,4 +1,4 @@
-import { EyeIcon, ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon, UsersIcon } from "lucide-react"
+import { CalendarDaysIcon, EyeIcon, ListTodoIcon, LogOutIcon, MapIcon, PlaneIcon, UsersIcon } from "lucide-react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import type { Author } from "@/lib/types"
@@ -17,9 +17,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-export type Tab = "backlog" | "map"
+export type Tab = "plan" | "backlog" | "map"
 
 const items: { tab: Tab; label: string; icon: typeof MapIcon }[] = [
+  { tab: "plan", label: "여행계획", icon: CalendarDaysIcon },
   { tab: "backlog", label: "백로그", icon: ListTodoIcon },
   { tab: "map", label: "지도", icon: MapIcon },
 ]
@@ -49,7 +50,7 @@ export function AppSidebar({
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">일본 여행</span>
-                <span className="text-muted-foreground truncate text-xs">용훈 · 성진 · 현준</span>
+                <span className="text-muted-foreground truncate text-xs">용훈 · 성진 · 현준 · 성혁</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -5,7 +5,7 @@ export function ProfilePicker({ onPick }: { onPick: (u: Author) => void }) {
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-10 p-4">
       <h1 className="text-2xl font-semibold sm:text-3xl">누가 사용하나요?</h1>
-      <ul className="flex flex-wrap justify-center gap-4 sm:gap-10">
+      <ul className="grid grid-cols-2 justify-items-center gap-6 sm:flex sm:gap-10">
         {AUTHORS.map((name) => (
           <li key={name}>
             <button

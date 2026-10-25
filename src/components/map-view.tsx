@@ -51,12 +51,12 @@ export function MapView({
         <Card className="gap-2 py-4">
           <CardHeader className="px-4">
             <CardTitle className="text-base">{day}일차 장소</CardTitle>
-            <CardDescription>백로그 순서대로 보여요</CardDescription>
+            <CardDescription>여행계획 순서대로 보여요</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
             {stops.length === 0 ? (
               <p className="text-muted-foreground px-2 py-6 text-center text-sm">
-                장소가 입력된 백로그가 없어요
+                장소가 입력된 일정이 없어요
               </p>
             ) : (
               <ol className="grid gap-1">

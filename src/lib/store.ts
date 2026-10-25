@@ -1,5 +1,5 @@
-// 블록 저장소. 블록 하나가 문서 하나이고, 내용은 모두 암호화되어 저장된다.
-// trips/{tripId}/blocks/{blockId} = { iv, data }
+// 저장소. 여행계획 항목과 백로그 항목이 각각 문서 하나이고, 내용은 모두 암호화되어 저장된다.
+// trips/{tripId}/blocks/{id} = { iv, data }  (종류는 암호문 안의 kind로 구분)
 // 개발 중에는 VITE_LOCAL_STORE=1 로 브라우저 localStorage만 쓸 수 있다.
 import { initializeApp } from "firebase/app"
 import {
@@ -12,21 +12,21 @@ import {
 } from "firebase/firestore"
 import { decrypt, encrypt, type Encrypted, type Session } from "./crypto"
 import { firebaseConfig } from "./firebase-config"
-import type { Block } from "./types"
+import type { Doc } from "./types"
 
 type Unsubscribe = () => void
 
 export interface Store {
-  watch(onChange: (blocks: Block[]) => void, onError: (e: Error) => void): Unsubscribe
-  put(blocks: Block[]): Promise<void>
+  watch(onChange: (docs: Doc[]) => void, onError: (e: Error) => void): Unsubscribe
+  put(docs: Doc[]): Promise<void>
   remove(id: string): Promise<void>
 }
 
 async function decryptAll(s: Session, payloads: Encrypted[]) {
-  const out: Block[] = []
+  const out: Doc[] = []
   for (const p of payloads) {
     try {
-      out.push(await decrypt<Block>(s.key, p))
+      out.push(await decrypt<Doc>(s.key, p))
     } catch {
       // 다른 키로 만든 문서는 무시
     }
