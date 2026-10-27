@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react"
-import { EyeIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import {
+  EyeIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+  ThumbsUpIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
@@ -30,7 +37,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Store } from "@/lib/store"
-import { CATEGORIES, type Author, type Category, type Idea } from "@/lib/types"
+import { cn } from "@/lib/utils"
+import { AUTHORS, CATEGORIES, type Author, type Category, type Idea } from "@/lib/types"
 
 const EMOJI: Record<Category, string> = {
   "먹고 싶은 것": "🍜",
@@ -51,6 +59,17 @@ const PLACEHOLDER: Record<Category, string> = {
 }
 
 const LAST_CATEGORY = "trip-plan:last-category"
+const SORT_KEY = "trip-plan:backlog-sort"
+
+type Sort = "latest" | "votes"
+
+function savedSort(): Sort {
+  try {
+    return localStorage.getItem(SORT_KEY) === "votes" ? "votes" : "latest"
+  } catch {
+    return "latest"
+  }
+}
 
 function lastCategory(): Category {
   try {
@@ -111,10 +130,31 @@ export function Backlog({
   const [editing, setEditing] = useState<Idea | null>(null)
   const [deleting, setDeleting] = useState<Idea | null>(null)
   const [addError, setAddError] = useState("")
+  const [sort, setSortState] = useState<Sort>(savedSort)
 
-  const sorted = useMemo(() => [...ideas].sort((a, b) => a.createdAt - b.createdAt), [ideas])
+  function setSort(s: Sort) {
+    setSortState(s)
+    try {
+      localStorage.setItem(SORT_KEY, s)
+    } catch {
+      // 무시
+    }
+  }
+
+  const sorted = useMemo(
+    () =>
+      [...ideas].sort((a, b) =>
+        sort === "votes"
+          ? (b.upvotes?.length ?? 0) - (a.upvotes?.length ?? 0) || a.createdAt - b.createdAt
+          : a.createdAt - b.createdAt,
+      ),
+    [ideas, sort],
+  )
   const groups = CATEGORIES.filter((c) => filter === "all" || c === filter)
-    .map((c) => ({ category: c, items: sorted.filter((i) => i.category === c) }))
+    .map((c) => ({
+      category: c,
+      items: sorted.filter((i) => i.category === c),
+    }))
     .filter((g) => filter !== "all" || g.items.length > 0)
 
   async function add(e: React.FormEvent) {
@@ -149,6 +189,17 @@ export function Backlog({
     setIdeas(ideas.filter((i) => i.id !== deleting.id))
     setDeleting(null)
     await store.remove(deleting.id).catch(console.error)
+  }
+
+  async function toggleUpvote(idea: Idea) {
+    if (!user || readOnly) return
+    const voters = idea.upvotes ?? []
+    const upvotes = voters.includes(user)
+      ? voters.filter((v) => v !== user)
+      : AUTHORS.filter((a) => a === user || voters.includes(a))
+    const next = { ...idea, upvotes }
+    setIdeas(ideas.map((i) => (i.id === next.id ? next : i)))
+    await store.put([next]).catch(console.error)
   }
 
   async function saveEdit(next: Idea) {
@@ -188,7 +239,7 @@ export function Backlog({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
           variant={filter === "all" ? "default" : "outline"}
@@ -206,6 +257,15 @@ export function Backlog({
             {EMOJI[c]} {c} {ideas.filter((i) => i.category === c).length}
           </Button>
         ))}
+        <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+          <SelectTrigger size="sm" aria-label="정렬" className="ml-auto w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="latest">등록순</SelectItem>
+            <SelectItem value="votes">추천순</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -231,48 +291,83 @@ export function Backlog({
                   <p className="text-muted-foreground px-2 py-4 text-sm">아직 없어요</p>
                 ) : (
                   <ul className="grid">
-                    {g.items.map((i) => (
-                      <li
-                        key={i.id}
-                        className="hover:bg-accent/60 flex items-center gap-3 rounded-md px-2 py-1.5"
-                      >
-                        <UserAvatar
-                          name={i.author}
-                          size="sm"
-                          className="size-7"
-                          textClassName="text-[9px]"
-                        />
-                        <span className="min-w-0 flex-1 text-sm break-words">{i.title}</span>
-                        {!readOnly && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-7"
-                                aria-label="옵션"
-                              >
-                                <MoreHorizontalIcon />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32">
-                              <DropdownMenuItem onSelect={() => setEditing(i)}>
-                                <PencilIcon />
-                                편집
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onSelect={() => setDeleting(i)}
-                              >
-                                <Trash2Icon />
-                                삭제
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </li>
-                    ))}
+                    {g.items.map((i) => {
+                      const voters = i.upvotes ?? []
+                      const voted = !!user && voters.includes(user)
+                      return (
+                        <li
+                          key={i.id}
+                          className="hover:bg-accent/60 grid gap-1 rounded-md px-2 py-1.5"
+                        >
+                          <div className="flex items-center gap-3">
+                            <UserAvatar
+                              name={i.author}
+                              size="sm"
+                              className="size-7"
+                              textClassName="text-[9px]"
+                            />
+                            <span className="min-w-0 flex-1 text-sm break-words">{i.title}</span>
+                            <Button
+                              variant={voted ? "secondary" : "ghost"}
+                              size="sm"
+                              className={cn(
+                                "h-7 gap-1 px-2 tabular-nums",
+                                voted && "text-primary",
+                                readOnly && "disabled:opacity-100",
+                              )}
+                              aria-label={voted ? "추천 취소" : "추천"}
+                              aria-pressed={voted}
+                              disabled={readOnly || !user}
+                              onClick={() => toggleUpvote(i)}
+                            >
+                              <ThumbsUpIcon className={cn(voted && "fill-current")} />
+                              {voters.length}
+                            </Button>
+                            {!readOnly && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-7"
+                                    aria-label="옵션"
+                                  >
+                                    <MoreHorizontalIcon />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-32">
+                                  <DropdownMenuItem onSelect={() => setEditing(i)}>
+                                    <PencilIcon />
+                                    편집
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onSelect={() => setDeleting(i)}
+                                  >
+                                    <Trash2Icon />
+                                    삭제
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                          {voters.length > 0 && (
+                            <div className="flex items-center gap-1 pl-10" aria-label="추천한 사람">
+                              {voters.map((v) => (
+                                <UserAvatar
+                                  key={v}
+                                  name={v}
+                                  size="sm"
+                                  className="size-5"
+                                  textClassName="text-[7px]"
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </CardContent>
