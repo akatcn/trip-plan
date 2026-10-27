@@ -58,7 +58,6 @@ const PLACEHOLDER: Record<Category, string> = {
   기타: "환전하기",
 }
 
-const LAST_CATEGORY = "trip-plan:last-category"
 const SORT_KEY = "trip-plan:backlog-sort"
 
 type Sort = "latest" | "votes"
@@ -68,15 +67,6 @@ function savedSort(): Sort {
     return localStorage.getItem(SORT_KEY) === "votes" ? "votes" : "latest"
   } catch {
     return "latest"
-  }
-}
-
-function lastCategory(): Category {
-  try {
-    const v = localStorage.getItem(LAST_CATEGORY)
-    return CATEGORIES.includes(v as Category) ? (v as Category) : CATEGORIES[0]
-  } catch {
-    return CATEGORIES[0]
   }
 }
 
@@ -124,7 +114,7 @@ export function Backlog({
   loading: boolean
   error: string
 }) {
-  const [category, setCategory] = useState<Category>(lastCategory)
+  const [category, setCategory] = useState<Category>(CATEGORIES[0])
   const [title, setTitle] = useState("")
   const [filter, setFilter] = useState<Category | "all">("all")
   const [editing, setEditing] = useState<Idea | null>(null)
@@ -167,11 +157,6 @@ export function Backlog({
       title: title.trim(),
       author: user,
       createdAt: Date.now(),
-    }
-    try {
-      localStorage.setItem(LAST_CATEGORY, category)
-    } catch {
-      // 무시
     }
     setTitle("")
     setAddError("")
@@ -243,7 +228,10 @@ export function Backlog({
         <Button
           size="sm"
           variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
+          onClick={() => {
+            setFilter("all")
+            setCategory(CATEGORIES[0])
+          }}
         >
           전체 {ideas.length}
         </Button>
@@ -252,7 +240,10 @@ export function Backlog({
             key={c}
             size="sm"
             variant={filter === c ? "default" : "outline"}
-            onClick={() => setFilter(c)}
+            onClick={() => {
+              setFilter(c)
+              setCategory(c)
+            }}
           >
             {EMOJI[c]} {c} {ideas.filter((i) => i.category === c).length}
           </Button>
@@ -295,10 +286,7 @@ export function Backlog({
                       const voters = i.upvotes ?? []
                       const voted = !!user && voters.includes(user)
                       return (
-                        <li
-                          key={i.id}
-                          className="hover:bg-accent/60 grid gap-1 rounded-md px-2 py-1.5"
-                        >
+                        <li key={i.id} className="grid gap-1 rounded-md px-2 py-1.5">
                           <div className="flex items-center gap-3">
                             <UserAvatar
                               name={i.author}
