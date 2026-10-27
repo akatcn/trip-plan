@@ -37,6 +37,7 @@ export type Idea = {
   title: string
   author: Author
   createdAt: number
+  upvotes?: Author[]
 }
 
 /** 저장소에 들어가는 문서 하나 */
