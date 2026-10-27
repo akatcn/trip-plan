@@ -37,7 +37,17 @@ const EMOJI: Record<Category, string> = {
   "가고 싶은 곳": "🏯",
   "사고 싶은 것": "🛍️",
   "하고 싶은 것": "🎢",
+  "하고 싶지 않은 것": "❌",
   기타: "📌",
+}
+
+const PLACEHOLDER: Record<Category, string> = {
+  "먹고 싶은 것": "타코야끼",
+  "가고 싶은 곳": "히메지 성",
+  "사고 싶은 것": "건담",
+  "하고 싶은 것": "스티커 사진 찍기",
+  "하고 싶지 않은 것": "도톤보리 가기",
+  기타: "환전하기",
 }
 
 const LAST_CATEGORY = "trip-plan:last-category"
@@ -156,11 +166,11 @@ export function Backlog({
         </span>
       ) : (
         <form onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
-          <CategorySelect value={category} onChange={setCategory} className="sm:w-44" />
+          <CategorySelect value={category} onChange={setCategory} className="sm:w-52" />
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={category === "가고 싶은 곳" ? "예: 히메지 성" : "예: 타코야끼"}
+            placeholder={`예: ${PLACEHOLDER[category]}`}
             aria-label="항목"
             className="flex-1"
           />

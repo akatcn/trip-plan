@@ -24,6 +24,7 @@ export const CATEGORIES = [
   "가고 싶은 곳",
   "사고 싶은 것",
   "하고 싶은 것",
+  "하고 싶지 않은 것",
   "기타",
 ] as const
 export type Category = (typeof CATEGORIES)[number]

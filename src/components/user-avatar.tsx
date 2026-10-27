@@ -2,11 +2,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Author } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-// 용훈(파랑), 성진(초록), 현준(노랑), 성혁(주황)
+// 용훈(파랑), 성진(초록), 현준(딸기우유 분홍), 성혁(주황)
 export const USER_COLOR: Record<Author, string> = {
   용훈: "bg-blue-500 text-white",
   성진: "bg-green-500 text-white",
-  현준: "bg-yellow-400 text-yellow-950",
+  현준: "bg-[#ec6f98] text-white",
   성혁: "bg-orange-500 text-white",
 }
 

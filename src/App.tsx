@@ -104,7 +104,7 @@ function Dashboard({
   const setIdeas = (i: Idea[]) => setDocs([...blocks, ...i])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState("")
-  const [tab, setTab] = useState<Tab>("plan")
+  const [tab, setTab] = useState<Tab>("backlog")
   const [day, setDay] = useState<Day>(1)
 
   useEffect(
