@@ -20,8 +20,8 @@ import {
 export type Tab = "plan" | "backlog" | "map"
 
 const items: { tab: Tab; label: string; icon: typeof MapIcon }[] = [
-  { tab: "plan", label: "여행계획", icon: CalendarDaysIcon },
   { tab: "backlog", label: "백로그", icon: ListTodoIcon },
+  { tab: "plan", label: "여행계획", icon: CalendarDaysIcon },
   { tab: "map", label: "지도", icon: MapIcon },
 ]
 
