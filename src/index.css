@@ -103,4 +103,12 @@
     @apply bg-background text-foreground;
     font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="option"],
+  [role="menuitem"],
+  [role="combobox"],
+  [role="tab"] {
+    cursor: pointer;
+  }
 }
