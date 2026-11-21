@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { backlogCsv, downloadCsv } from "@/lib/csv"
+import { backlogCsv, downloadCsv, today } from "@/lib/csv"
 import type { Store } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { AUTHORS, CATEGORIES, type Author, type Category, type Idea } from "@/lib/types"
@@ -151,10 +151,7 @@ export function Backlog({
 
   function exportCsv() {
     const rows = groups.flatMap((g) => g.items)
-    const d = new Date()
-    const p = (n: number) => String(n).padStart(2, "0")
-    const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-    downloadCsv(`trip-plan-backlog-${stamp}.csv`, backlogCsv(rows))
+    downloadCsv(`trip-plan-backlog-${today()}.csv`, backlogCsv(rows))
   }
 
   async function add(e: React.FormEvent) {
