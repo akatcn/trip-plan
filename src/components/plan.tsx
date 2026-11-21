@@ -19,6 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import {
   EyeIcon,
+  DownloadIcon,
   GripVerticalIcon,
   MapPinIcon,
   MoreHorizontalIcon,
@@ -56,6 +57,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { downloadCsv, planCsv, today } from "@/lib/csv"
 import type { Store } from "@/lib/store"
 import type { Author, Block, BlockInput, Day } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -147,17 +149,40 @@ export function Plan({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <DaySelect day={day} onDay={onDay} />
-        {readOnly ? (
-          <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <EyeIcon className="size-4" />
-            보기 전용
-          </span>
-        ) : (
-          <Button onClick={openNew}>
-            <PlusIcon />
-            일정 추가
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={loading || blocks.length === 0}>
+                <DownloadIcon />
+                CSV
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={rows.length === 0}
+                onSelect={() => downloadCsv(`trip-plan-day${day}-${today()}.csv`, planCsv(rows))}
+              >
+                {day}일차만
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => downloadCsv(`trip-plan-all-${today()}.csv`, planCsv(blocks))}
+              >
+                전체 일차
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {readOnly ? (
+            <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <EyeIcon className="size-4" />
+              보기 전용
+            </span>
+          ) : (
+            <Button onClick={openNew}>
+              <PlusIcon />
+              일정 추가
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
