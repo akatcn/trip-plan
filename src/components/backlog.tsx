@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import {
+  DownloadIcon,
   EyeIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -36,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { backlogCsv, downloadCsv } from "@/lib/csv"
 import type { Store } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { AUTHORS, CATEGORIES, type Author, type Category, type Idea } from "@/lib/types"
@@ -147,6 +149,14 @@ export function Backlog({
     }))
     .filter((g) => filter !== "all" || g.items.length > 0)
 
+  function exportCsv() {
+    const rows = groups.flatMap((g) => g.items)
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, "0")
+    const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    downloadCsv(`trip-plan-backlog-${stamp}.csv`, backlogCsv(rows))
+  }
+
   async function add(e: React.FormEvent) {
     e.preventDefault()
     if (!user || !title.trim()) return
@@ -257,6 +267,15 @@ export function Backlog({
             <SelectItem value="votes">추천순</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={exportCsv}
+          disabled={loading || groups.every((g) => g.items.length === 0)}
+        >
+          <DownloadIcon />
+          CSV
+        </Button>
       </div>
 
       {loading ? (
